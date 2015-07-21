@@ -9,9 +9,15 @@ session = Session()
 
 def main():
 	create_download_folder()
-	for hh in session.query(HouseHold).all():
-		browser.get(
-		hh.
+	for hhList in page_query(session.query(HouseHold).all()):
+		browser = webdriver.FireFox()
+		browser.implicitly_wait(5)
+		for hh in hhList:
+			browser.get(URL)
+			hh.search_pin(browser)
+			hh.show_all_results(browser)
+			hh.download(browser)
+		browser.quit()
 
 def create_download_folder():
 	if not os.path.isdir(DOWNLOAD_FOLDER):
