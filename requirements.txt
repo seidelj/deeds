@@ -1,5 +1,7 @@
+EasyProcess==0.1.9
 Mako==1.0.1
 MarkupSafe==0.23
+PyVirtualDisplay==0.1.5
 SQLAlchemy==1.0.6
 alembic==0.7.6
 argparse==1.2.1
