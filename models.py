@@ -29,6 +29,14 @@ class HouseHold(Base):
 
 		return pinlist
 	
+	def check_hid(self, browser):
+		try:
+			browser.find_element_by_id("MessageBoxCtrl1_ErrorLabel1")
+		except NoSuchElementException:
+			return True
+		else:
+			return False
+
 	def get_total_rows(self, browser):
 		total_rows = browser.find_element_by_id('SearchInfo1_ACSLabel_SearchResultCount').text
 		return int(total_rows.replace(" ",""))
@@ -44,7 +52,8 @@ class HouseHold(Base):
 				inputElement = browser.find_element_by_id(elementid)	
 				inputElement.send_keys(pinlist[x])
 			browser.find_element_by_id('SearchFormEx1_btnSearch').click()
-			return True
+			go = self.check_hid(browser)
+			return go
 
 	def show_all_results(self, browser):
 		total_rows = self.get_total_rows(browser)
