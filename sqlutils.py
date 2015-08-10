@@ -1,10 +1,6 @@
-from sqlalchemy.sql.expression import ClauseElement
-import csv, os
-import pandas as pd
-from sqlalachemy import *
 
 def page_query(q):
-	offset = 0:
+	offset = 0
 	while True:
 		r = False
 		elemList = []

@@ -3,6 +3,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, String, Sequence, ForeignKey
 from sqlalchemy.orm import sessionmaker, relationship, backref
 import time, sys, os
+from selenium.common.exceptions import NoSuchElementException
 
 engine = create_engine('postgresql://postgres:joseph@localhost/deeds')
 Base = declarative_base()
@@ -25,34 +26,32 @@ class HouseHold(Base):
 		box4 = self.pin[10:]
 		
 		pinlist = [box0, box1, box2, box3, box4]
+
 		return pinlist
 	
 	def get_total_rows(self, browser):
-		total_rows = browser.find_elements_by_id('SearchInfo1_ACSLabel_SearchResultCount.cssLabelText').text
+		total_rows = browser.find_element_by_id('SearchInfo1_ACSLabel_SearchResultCount').text
 		return int(total_rows.replace(" ",""))
 
 	def search_pin(self, browser):
 		if len(self.pin) != 14:
 			return False
 		else:
-			input_id = "SearchFormEx1_PINTextBox"
-			sb0 = browser.find_element_by_id("{}0".format(input_id))
-			sb1 = browser.find_element_by_id("{}1".format(input_id))
-			sb2 = browser.find_element_by_id("{}2".format(input_id))
-			sb3 = browser.find_element_by_id("{}3".format(input_id))
-			sb4 = browser.find_element_by_id("{}4".format(input_id))
-		
+			input_id = "SearchFormEx1_PINTextBox"	
+			pinlist = self.split_pin()
 			for x in range(0,5):
-				browser.find_element_by_id("{}{}".format(input_id, x)).sendkeys(self.split_pin[x])
-			browser.find_element_by_id('SearchFormEx1_btnSearch')
+				elementid = input_id + str(x)
+				inputElement = browser.find_element_by_id(elementid)	
+				inputElement.send_keys(pinlist[x])
+			browser.find_element_by_id('SearchFormEx1_btnSearch').click()
 			return True
 
 	def show_all_results(self, browser):
 		total_rows = self.get_total_rows(browser)
 		if total_rows <= 20:
-			browser.find_element_by_id('DocList1_PageView20Btn').click()
+			browser.find_element_by_id('DocList1_PageView2Btn').click()
 		elif 20 < total_rows <= 50:
-			browser.find_element_by_id('DocList1_PageView50Btn').click()
+			browser.find_element_by_id('DocList1_PageView5Btn').click()
 		elif 50 < total_rows:
 			browser.find_element_by_id('DocList1_PageView100Btn').click()
 		else:
@@ -61,25 +60,42 @@ class HouseHold(Base):
 	def save_file(self, filename, html):
 		try:
 			with open(filename, 'w') as f:
-				f.write(html)
+				f.write(html.encode('utf-8'))
 		except IOError:
 			print "Could not write to file {}".format(filename)
 
 	def download(self, browser):
 		num_of_rows = self.get_total_rows(browser)
-		for x in range(0, num_of_rows):
-			link = browser.find_element_by_id('DocList1_GridView_Document_ctl{}_ButtonRow_PIN_{}'.format(x + 2, x))
-			document_no = browser.find_element_by_id('DocList1_GridView_Document_ctl02_ButtonRow_Doc. #_{}'.format(x))
-			filename = document_no.replace(" ","") + self.pin
-			filename = os.path.join(DOWNLOAD_FOLDER, "{}.html".format(filename))
-			if not os.path.exists(filename):
-				link.click()
-				time.sleep(1)
-				html = browser.page_source
-				self.save_file(filename, html)
-			else:
-				print "Already downloaded {}".format(filename)
-		
+		num_of_pages = num_of_rows/100
+		if num_of_pages != 0:
+			pages_list = []
+			for x in range(num_of_pages + 1):
+				if x == num_of_pages:
+					num = num_of_rows - x*100
+				else:
+					num = 100
+				pages_list.append(num)
+		else:
+			pages_list = [num_of_rows]
+		print pages_list
+		for page in pages_list:
+			for x in range(0, page):
+				zeroX = str(x+2).zfill(2)
+				link = browser.find_element_by_id('DocList1_GridView_Document_ctl{}_ButtonRow_PIN_{}'.format(zeroX, x))
+				document_no = browser.find_element_by_id('DocList1_GridView_Document_ctl{}_ButtonRow_Doc. #_{}'.format(zeroX,x)).text
+				filename = document_no.replace(" ","") + "_" + self.pin
+				filename = os.path.join(DOWNLOAD_DIR, "{}.html".format(filename))
+				if not os.path.exists(filename):
+					link.click()
+					time.sleep(1.5)
+					html = browser.page_source
+					self.save_file(filename, html)
+				else:
+					print "Already downloaded {}".format(filename)
+			try:
+				browser.find_element_by_id("DocList1_LinkButtonNext").click()
+			except NoSuchElementException:
+				continue
 class Record(Base):
 	
 	__tablename__ = 'record'
@@ -95,3 +111,4 @@ class Record(Base):
 	household = relationship("HouseHold", backref=backref('record', order_by=id))
 
 Base.metadata.create_all(engine)
+
