@@ -2,3 +2,5 @@ venv
 download
 *.pyc
 *~
+queue.p
+*.log

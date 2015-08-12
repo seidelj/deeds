@@ -3,7 +3,10 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, String, Sequence, ForeignKey
 from sqlalchemy.orm import sessionmaker, relationship, backref
 import time, sys, os
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
 
 engine = create_engine('postgresql://postgres:joseph@localhost/deeds')
 Base = declarative_base()
@@ -39,7 +42,12 @@ class HouseHold(Base):
 
 	def get_total_rows(self, browser):
 		total_rows = browser.find_element_by_id('SearchInfo1_ACSLabel_SearchResultCount').text
-		return int(total_rows.replace(" ",""))
+		try:
+			tr = int(total_rows.replace(" ",""))
+		except ValueError:
+			sys.exit("Invalid string literal for PIN: {}".format(self.pin))
+		else:
+			return tr
 
 	def search_pin(self, browser):
 		if len(self.pin) != 14:
@@ -47,9 +55,11 @@ class HouseHold(Base):
 		else:
 			input_id = "SearchFormEx1_PINTextBox"	
 			pinlist = self.split_pin()
+			wait = WebDriverWait(browser, 10)
 			for x in range(0,5):
 				elementid = input_id + str(x)
-				inputElement = browser.find_element_by_id(elementid)	
+				inputElement = wait.until(EC.element_to_be_clickable((By.ID, elementid)))
+				#inputElement = browser.find_element_by_id(elementid)	
 				inputElement.send_keys(pinlist[x])
 			browser.find_element_by_id('SearchFormEx1_btnSearch').click()
 			go = self.check_hid(browser)
@@ -86,16 +96,26 @@ class HouseHold(Base):
 				pages_list.append(num)
 		else:
 			pages_list = [num_of_rows]
-		print pages_list
+		
+		wait = WebDriverWait(browser, 10)
 		for page in pages_list:
 			for x in range(0, page):
 				zeroX = str(x+2).zfill(2)
-				link = browser.find_element_by_id('DocList1_GridView_Document_ctl{}_ButtonRow_PIN_{}'.format(zeroX, x))
+				e_id = "DocList1_GridView_Document_ctl{}_ButtonRow_PIN_{}".format(zeroX, x)
+				try:
+					link = wait.until(EC.element_to_be_clickable((By.ID, e_id)))
+				except StaleElementReferenceException:
+					time.sleep(3)
+					link = wait.until(EC.element_to_be_clickable((By.ID, e_id)))
 				document_no = browser.find_element_by_id('DocList1_GridView_Document_ctl{}_ButtonRow_Doc. #_{}'.format(zeroX,x)).text
 				filename = document_no.replace(" ","") + "_" + self.pin
 				filename = os.path.join(DOWNLOAD_DIR, "{}.html".format(filename))
 				if not os.path.exists(filename):
-					link.click()
+					try:
+						link.click()
+					except StaleElementReferenceException:
+						link = wait.until(EC.element_to_be_clickable((By.ID, e_id)))
+						link.click()
 					time.sleep(1.5)
 					html = browser.page_source
 					self.save_file(filename, html)
