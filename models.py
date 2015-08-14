@@ -58,7 +58,7 @@ class HouseHold(Base):
 			wait = WebDriverWait(browser, 10)
 			for x in range(0,5):
 				elementid = input_id + str(x)
-				inputElement = wait.until(EC.element_to_be_clickable((By.ID, elementid)))
+				inputElement = wait.until(EC.presence_of_element_located((By.ID, elementid)))
 				#inputElement = browser.find_element_by_id(elementid)	
 				inputElement.send_keys(pinlist[x])
 			browser.find_element_by_id('SearchFormEx1_btnSearch').click()
@@ -97,26 +97,24 @@ class HouseHold(Base):
 		else:
 			pages_list = [num_of_rows]
 		
-		wait = WebDriverWait(browser, 10)
+		wait = WebDriverWait(browser, 15)
 		for page in pages_list:
 			for x in range(0, page):
 				zeroX = str(x+2).zfill(2)
 				e_id = "DocList1_GridView_Document_ctl{}_ButtonRow_PIN_{}".format(zeroX, x)
-				try:
-					link = wait.until(EC.element_to_be_clickable((By.ID, e_id)))
-				except StaleElementReferenceException:
-					time.sleep(3)
-					link = wait.until(EC.element_to_be_clickable((By.ID, e_id)))
+				link = wait.until(EC.presence_of_element_located((By.ID, e_id)))
+				#try:
+				#	link = wait.until(EC.presence_of_element_located((By.ID, e_id)))
+				#except StaleElementReferenceException:
+				#	time.sleep(3)
+				#	link = wait.until(EC.presence_of_element_located((By.ID, e_id)))
 				document_no = browser.find_element_by_id('DocList1_GridView_Document_ctl{}_ButtonRow_Doc. #_{}'.format(zeroX,x)).text
 				filename = document_no.replace(" ","") + "_" + self.pin
 				filename = os.path.join(DOWNLOAD_DIR, "{}.html".format(filename))
 				if not os.path.exists(filename):
-					try:
-						link.click()
-					except StaleElementReferenceException:
-						link = wait.until(EC.element_to_be_clickable((By.ID, e_id)))
-						link.click()
-					time.sleep(1.5)
+					link = wait.until(EC.presence_of_element_located((By.ID, e_id)))
+					link.click()
+					#time.sleep(1.5)
 					html = browser.page_source
 					self.save_file(filename, html)
 				else:

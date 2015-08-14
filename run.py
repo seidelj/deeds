@@ -8,17 +8,17 @@ from utils import qdumper
 import atexit
 import threading
 import pickle
+from pyvirtualdisplay import Display
 
-#display = Display(visible=0, size=(800,600))
-#display.start()
-URL = "http://12.218.239.82/i2/default.aspx?AspxAutoDetectCookieSupport=1"
+display = Display(visible=0, size=(800,600))
+display.start()
+URL = "http://12.218.239.82/i2/"
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 DOWNLOAD_FOLDER = os.path.join(PROJECT_DIR, 'download')
 
 session = Session()
 
 def exit_handler():
-	print _queue.qsize()
 	remaining = [item for item in qdumper(_queue)]
 	pickle.dump(remaining, open("queue.p", "wb"))
 
@@ -39,7 +39,7 @@ def main(args):
 		for hh in session.query(HouseHold).filter(HouseHold.id >= STARTING_ID).order_by(HouseHold.id):
 			_queue.put(hh)
 	
-	for i in range(20):
+	for i in range(4):
 		td = ThreadDownload(_queue, URL)
 		td.setDaemon(True)
 		td.start()

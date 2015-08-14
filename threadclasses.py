@@ -2,6 +2,7 @@ import os, sys, threading, time
 from selenium import webdriver
 from selenium.common.exceptions import StaleElementReferenceException, WebDriverException
 from selenium.webdriver.common.proxy import *
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 
 PROXY = "52.10.218.136:3128"
 proxy = webdriver.Proxy({
@@ -15,22 +16,21 @@ class ThreadDownload(threading.Thread):
 		threading.Thread.__init__(self)
 		self.queue = queue
 		self.url = url
-	
+
 	def run(self):
 		while True:
-			hh = self.queue.get()
 			b = False
 			while not b:
 				try:
-					browser = webdriver.PhantomJS()
+					browser = webdriver.Firefox()
 				except WebDriverException:
-					print "Could not open PhantonJS"
-					continue
+					print "could not open remote driver"
 				else:
-					b = True
+					b = True	
 			browser.set_window_size(1440,900)
 			browser.implicitly_wait(10)
 			browser.get(self.url)
+			hh = self.queue.get()
 			go = hh.search_pin(browser)
 			if go == True:
 				hh.show_all_results(browser)
